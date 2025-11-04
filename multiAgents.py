@@ -75,8 +75,55 @@ class ReflexAgent(Agent):
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
         "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        # Check for terminal states first
+        if successorGameState.isLose():
+            return float('-inf')  # Death is the worst outcome
+        if successorGameState.isWin():
+            return float('inf')   # Win is the best outcome
+        
+        new_food_list = newFood.asList()
+        
+        # Start with base game score
+        score = successorGameState.getScore()
+        
+        # Handle ghosts - use proportional penalties/rewards
+        for i, ghostState in enumerate(newGhostStates):
+            ghostPos = ghostState.getPosition()
+            distance_to_ghost = manhattanDistance(newPos, ghostPos)
+            
+            if newScaredTimes[i] > 0:
+                # Ghost is scared - reward being close (can eat it)
+                if distance_to_ghost <= 1:
+                    score += 500  # Can eat the ghost
+                elif distance_to_ghost <= 2:
+                    score += 200  # Very close, good opportunity
+            else:
 
+                for i in range(15):
+                    if distance_to_ghost <= i:
+                        score += distance_to_ghost * i*i
+        
+        # Reward being closer to food - use continuous gradient
+        if new_food_list:
+            shortest_distance_to_food = min([manhattanDistance(newPos, food) for food in new_food_list])
+            # Continuous reward: closer = better, with bonus for being very close
+            score -= shortest_distance_to_food * 5  # Penalize distance
+            
+            # Bonus for being very close to food (can eat it next move)
+            if shortest_distance_to_food == 0:
+                score += 100  # On food (will eat it)
+            elif shortest_distance_to_food == 1:
+                score += 50   # One step away
+        else:
+            # No food left - win state! (handled above, but just in case)
+            return float('inf')
+            
+        # Penalize STOP action to encourage movement
+        if action == Directions.STOP:
+            score -= 100
+            
+        return score
+        
 def scoreEvaluationFunction(currentGameState: GameState):
     """
     This default evaluation function just returns the score of the state.
