@@ -83,23 +83,23 @@ class ReflexAgent(Agent):
         # Process all ghosts
         for ghostIndex, ghostState in enumerate(newGhostStates):
             ghostPos = ghostState.getPosition()
-            distance_to_ghost = manhattanDistance(newPos, ghostPos)
+            distanceToGhost = manhattanDistance(newPos, ghostPos)
             
             if newScaredTimes[ghostIndex] > 0:
                 # Ghost is scared - reward being close (can eat it for points)
-                if distance_to_ghost <= 1:
+                if distanceToGhost <= 1:
                     score += 1000  # Can eat the ghost
-                elif distance_to_ghost <= 2:
+                elif distanceToGhost <= 2:
                     score += 500  # Very close, good opportunity
             else:
                 # track closest dangerous ghost
-                if distance_to_ghost < closest_dangerous_ghost:
-                    closest_dangerous_ghost = distance_to_ghost
+                if distanceToGhost < closest_dangerous_ghost:
+                    closest_dangerous_ghost = distanceToGhost
                 
                 # penalize based on distance to ghost
-                if distance_to_ghost <= 1:
+                if distanceToGhost <= 1:
                     score -= 10000  # EXTREMELY dangerous run away NOW!
-                elif distance_to_ghost <= 2:
+                elif distanceToGhost <= 2:
                     score -= 5000   # Very dangerous zone
   
         # Penalize STOP action
@@ -147,6 +147,36 @@ class MinimaxAgent(MultiAgentSearchAgent):
     Your minimax agent (question 2)
     """
 
+    def minimax(self, gameState: GameState, agentIndex, depth):
+        
+        if depth == 0 or gameState.isWin() or gameState.isLose(): # terminal state
+            return self.evaluationFunction(gameState)
+        
+        maximizingPlayerIndex = 0 # max player is index 0
+        legalActions = gameState.getLegalActions(agentIndex)
+
+        # navigate all agents
+        nextAgent = agentIndex + 1
+        if nextAgent == gameState.getNumAgents():
+            nextAgent = 0 # it's pacman's turn
+            depth -= 1
+
+        if agentIndex == maximizingPlayerIndex:
+            maxEval = float('-inf')
+            for action in legalActions: 
+                successorState = gameState.generateSuccessor(agentIndex, action)
+                eval = self.minimax(successorState, nextAgent, depth)
+                maxEval = max(maxEval, eval)
+            return maxEval
+        else:
+            minEval = float('inf')
+            for action in legalActions:
+                successorState = gameState.generateSuccessor(agentIndex, action)
+                eval = self.minimax(successorState, nextAgent, depth)
+                minEval = min(minEval, eval)
+            return minEval
+
+
     def getAction(self, gameState: GameState):
         """
         Returns the minimax action from the current gameState using self.depth
@@ -170,8 +200,23 @@ class MinimaxAgent(MultiAgentSearchAgent):
         gameState.isLose():
         Returns whether or not the game state is a losing state
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        pacmanIndex = 0
+        legalActions = gameState.getLegalActions()
+
+        bestAction = None
+        bestValue = float("-inf")
+
+        for action in legalActions: 
+            successor = gameState.generateSuccessor(pacmanIndex, action)
+            value = self.minimax(successor, 1, self.depth)
+
+            if value > bestValue:
+                bestValue = value
+                bestAction = action
+
+        return bestAction if bestAction else legalActions[0]
+
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
