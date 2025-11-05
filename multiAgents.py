@@ -74,21 +74,11 @@ class ReflexAgent(Agent):
         newGhostStates = successorGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
-        "*** YOUR CODE HERE ***"
-        # Check for terminal states first
-        if successorGameState.isLose():
-            return float('-inf')
-        if successorGameState.isWin():
-            return float('inf')
-        
-        new_food_list = newFood.asList()
-        capsules = successorGameState.getCapsules()
-        
         # Start with base game score
         score = successorGameState.getScore()
         
         # Find closest dangerous ghost to determine danger level
-        closest_dangerous_ghost = float('inf')
+        closest_dangerous_ghost = float('inf') # we will always replace this
         
         # Process all ghosts
         for ghostIndex, ghostState in enumerate(newGhostStates):
@@ -98,56 +88,28 @@ class ReflexAgent(Agent):
             if newScaredTimes[ghostIndex] > 0:
                 # Ghost is scared - reward being close (can eat it for points)
                 if distance_to_ghost <= 1:
-                    score += 500  # Can eat the ghost
+                    score += 1000  # Can eat the ghost
                 elif distance_to_ghost <= 2:
-                    score += 200  # Very close, good opportunity
+                    score += 500  # Very close, good opportunity
             else:
-                # Track closest dangerous ghost
+                # track closest dangerous ghost
                 if distance_to_ghost < closest_dangerous_ghost:
                     closest_dangerous_ghost = distance_to_ghost
                 
-                # Ghost is dangerous - penalize based on distance
-                # Use progressive penalties that scale smoothly
+                # penalize based on distance to ghost
                 if distance_to_ghost <= 1:
-                    score -= 5000  # EXTREMELY dangerous - run away NOW!
+                    score -= 10000  # EXTREMELY dangerous run away NOW!
                 elif distance_to_ghost <= 2:
-                    score -= 1000   # Very dangerous zone
-                elif distance_to_ghost <= 3:
-                    score -= 500   # Dangerous zone
-                
-                # # Continuous exponential penalty - closer = much worse
-                # if distance_to_ghost > 0:
-                #     score -= 1000.0 / (distance_to_ghost * distance_to_ghost)
-        
-        # Determine survival mode - when ghost is too close
-        # in_survival_mode = closest_dangerous_ghost <= 3
-        in_survival_mode = False
- 
-        # FOOD - only when safe and no pellets (or after pellets)
-        if new_food_list and not in_survival_mode:
-            shortest_distance_to_food = min(manhattanDistance(newPos, food) for food in new_food_list)
-            
-            # Only reward food if no pellets exist (pellets are priority)
-            if not capsules:
-                score -= shortest_distance_to_food * 10  # Reward being closer to food
-                if shortest_distance_to_food == 0:
-                    score += 10000  # On food
-                elif shortest_distance_to_food == 1:
-                    score += 500
-                elif shortest_distance_to_food == 2:
-                    score += 250
-
-        
+                    score -= 5000   # Very dangerous zone
+  
         # Penalize STOP action
         if action == Directions.STOP:
-            score -= 1000  # Always penalize stopping
+            score -= 5000  # penalize stopping
         
-        # Tie-breaker: ensure unique scores to prevent getting stuck
-        # Use position coordinates to create small unique differences
         currentDirection = currentGameState.getPacmanState().getDirection()
         if action == Directions.REVERSE[currentDirection]:
-            score -= 1000  # Don't go backwards
-            
+            score -= 2000  # discourage going backwards
+
         return score
         
 def scoreEvaluationFunction(currentGameState: GameState):
