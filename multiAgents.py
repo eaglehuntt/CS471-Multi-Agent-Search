@@ -86,7 +86,7 @@ class ReflexAgent(Agent):
             distanceToGhost = manhattanDistance(newPos, ghostPos)
             
             if newScaredTimes[ghostIndex] > 0:
-                # Ghost is scared - reward being close (can eat it for points)
+                # Ghost is scared, reward being close (can eat it for points)
                 if distanceToGhost <= 1:
                     score += 1000  # Can eat the ghost
                 elif distanceToGhost <= 2:
@@ -98,11 +98,11 @@ class ReflexAgent(Agent):
                 
                 # penalize based on distance to ghost
                 if distanceToGhost <= 1:
-                    score -= 10000  # EXTREMELY dangerous run away NOW!
+                    score -= 10000  # Very dangerous
                 elif distanceToGhost <= 2:
-                    score -= 5000   # Very dangerous zone
+                    score -= 5000   # dangerous zone
   
-        # Penalize STOP action
+        # Penalize stop action
         if action == Directions.STOP:
             score -= 5000  # penalize stopping
         
@@ -155,7 +155,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
         maximizingPlayerIndex = 0 # max player is index 0
         legalActions = gameState.getLegalActions(agentIndex)
 
-        # navigate all agents
+        # manage all agents
         nextAgent = agentIndex + 1
         if nextAgent == gameState.getNumAgents():
             nextAgent = 0 # it's pacman's turn
@@ -232,7 +232,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         legalActions = gameState.getLegalActions(agentIndex)
         
         nextDepth = depth
-        # navigate all agents
+        # manage all agents
         nextAgent = agentIndex + 1
         if nextAgent == gameState.getNumAgents():
             nextAgent = 0 # it's pacman's turn
@@ -244,7 +244,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 successorState = gameState.generateSuccessor(agentIndex, action)
                 eval = self.alphaBeta(successorState, nextAgent, nextDepth, alpha, beta)
                 
-                if eval > beta: 
+                if eval > beta: # prune based on > for the auto grader
                     return eval 
                 
                 v = max(v, eval)
@@ -279,7 +279,6 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         alpha = float('-inf')
         beta = float('inf')   
         
-
         for action in legalActions: 
             successor = gameState.generateSuccessor(pacmanIndex, action)
             value = self.alphaBeta(successor, 1, self.depth, alpha, beta)
@@ -317,7 +316,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
                 maxEval = max(maxEval, eval)
             return maxEval
         else:
-            # Chance node - calculate expected value (average) of all legal actions
+            # Chance node calculate expected value (average) of all legal actions
             expectedValue = 0
             for action in legalActions:
                 successorState = gameState.generateSuccessor(agentIndex, action)
@@ -353,32 +352,79 @@ def betterEvaluationFunction(currentGameState: GameState):
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 5).
 
-    DESCRIPTION: <write something here so we know what you did>
+    DESCRIPTION: 
+
+DESCRIPTION: 
+
+    1. I get the manhattan distance to each ghost, then get the absolute difference between pacman and the closest ghost. 
+
+    2. If pacman is farther than a distance of 3 from the closest ghost and the ghost is dangerous (not scared), the distance gets added to the state's score. This incentivises pacman to be farther away from dangerous ghosts.
+
+    3. If pacman is closer than distance 2 to a dangerous ghost, I heavily penalize the score to avoid death
+
+    4. Next we check if the closest ghost is scared. If it is, and its distance from pacman is less than 5, we multiple the distance by 3 and add it to the state's score. This is to incentivise pacman to eat scared ghosts that are close by.
+
+    5. Then, we penalize the state's score by the distance pacman is to the closest piece of food. This gives pacman the incentive to move towards the food.
+
+    6. We also penalize the distance to the closest capsule (with less weight than food) to encourage capsule collection
+
+    7. Finally, we increase the score for pacman eating food and we punish the score for any remaining power capsules
+
     """
 
     currentGameScore = currentGameState.getScore()
     pacmanPosition = currentGameState.getPacmanPosition()
-    ghostPositions = [ghostState.getPosition() for ghostState in currentGameState.getGhostStates()]
+    ghostStates = currentGameState.getGhostStates()
+    ghostPositions = [ghostState.getPosition() for ghostState in ghostStates]
+    scaredTimers = [ghostState.scaredTimer for ghostState in ghostStates]
 
-    # Calculate Manhattan distance to each ghost
-    ghostDistances = [abs(pacmanPosition[0] - ghostPos[0]) + abs(pacmanPosition[1] - ghostPos[1]) for ghostPos in ghostPositions]
+    # Calculate Manhattan distance to each ghost with their indices
+    ghostDistances = [(manhattanDistance(pacmanPosition, ghostPos), idx) for idx, ghostPos in enumerate(ghostPositions)]
 
-    # Get absolute difference between pacman and the closest ghost
+    # Get the closest ghost (distance and index)
     if ghostDistances:
-        closestGhostDistance = min(ghostDistances)
+        closestGhostDistance, closestGhostIndex = min(ghostDistances, key=lambda x: x[0]) # only compare the first value in the tuple, that is the Manhattan distance to the ghost. 
     else:
-        closestGhostDistance = None  # No ghosts found
-
-    # print(abs(closestGhostDistance)) if closestGhostDistance is not None else print("No ghosts available")
+        closestGhostDistance = None
+        closestGhostIndex = None
 
     stateScore = currentGameScore
-    if closestGhostDistance is not None and closestGhostDistance > 3:
+    if (closestGhostDistance is not None and closestGhostDistance > 3 and 
+        closestGhostIndex is not None and scaredTimers[closestGhostIndex] == 0):  # ghost is not scared
         stateScore += closestGhostDistance
+    
+    
+    if closestGhostDistance is not None and closestGhostIndex is not None and closestGhostDistance < 2:
+        if scaredTimers[closestGhostIndex] == 0:  # Ghost is NOT scared (dangerous)
+            stateScore -= currentGameScore 
+
+    # Check if the closest ghost is scared and within distance < 5
+    if closestGhostDistance is not None and closestGhostIndex is not None:
+        if scaredTimers[closestGhostIndex] > 0 and closestGhostDistance < 5:
+            stateScore += closestGhostDistance * 3
+
+    # Find distance to closest food and subtract it from stateScore
+    foodList = currentGameState.getFood().asList()
+    if foodList:
+        closestFoodDistance = min([manhattanDistance(pacmanPosition, food) for food in foodList])
+        stateScore -= closestFoodDistance
+    
+    # Get the distance to the closest capsule and pacman, and subtract it from the state's score
+    capsuleList = currentGameState.getCapsules()
+    if capsuleList:
+        closestCapsuleDistance = min([manhattanDistance(pacmanPosition, cap) for cap in capsuleList])
+        stateScore -= closestCapsuleDistance / 2
+
+    
+    # reward eating food
+    remainingFood = len(foodList)
+    stateScore += (100 - remainingFood) 
+
+    # punish remaining capsules 
+    remainingCapsules = len(capsuleList)
+    stateScore -= (100 + remainingCapsules * 2) if remainingCapsules > 0 else 0
 
     return stateScore
-
-
-
 
 # Abbreviation
 better = betterEvaluationFunction
