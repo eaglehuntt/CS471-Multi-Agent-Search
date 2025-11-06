@@ -355,7 +355,28 @@ def betterEvaluationFunction(currentGameState: GameState):
 
     DESCRIPTION: <write something here so we know what you did>
     """
-    return currentGameState.getScore()
+
+    currentGameScore = currentGameState.getScore()
+    pacmanPosition = currentGameState.getPacmanPosition()
+    ghostPositions = [ghostState.getPosition() for ghostState in currentGameState.getGhostStates()]
+
+    # Calculate Manhattan distance to each ghost
+    ghostDistances = [abs(pacmanPosition[0] - ghostPos[0]) + abs(pacmanPosition[1] - ghostPos[1]) for ghostPos in ghostPositions]
+
+    # Get absolute difference between pacman and the closest ghost
+    if ghostDistances:
+        closestGhostDistance = min(ghostDistances)
+    else:
+        closestGhostDistance = None  # No ghosts found
+
+    # print(abs(closestGhostDistance)) if closestGhostDistance is not None else print("No ghosts available")
+
+    stateScore = currentGameScore
+    if closestGhostDistance is not None and closestGhostDistance > 3:
+        stateScore += closestGhostDistance
+
+    return stateScore
+
 
 
 
