@@ -354,8 +354,6 @@ def betterEvaluationFunction(currentGameState: GameState):
 
     DESCRIPTION: 
 
-DESCRIPTION: 
-
     1. I get the manhattan distance to each ghost, then get the absolute difference between pacman and the closest ghost. 
 
     2. If pacman is farther than a distance of 3 from the closest ghost and the ghost is dangerous (not scared), the distance gets added to the state's score. This incentivises pacman to be farther away from dangerous ghosts.
