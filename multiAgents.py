@@ -318,12 +318,12 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             return maxEval
         else:
             # Chance node - calculate expected value (average) of all legal actions
-            expectedValue = 0.0
+            expectedValue = 0
             for action in legalActions:
                 successorState = gameState.generateSuccessor(agentIndex, action)
                 eval = self.expectimax(successorState, nextAgent, depth)
                 expectedValue += eval
-            return expectedValue / len(legalActions) if len(legalActions) > 0 else 0.0
+            return expectedValue / len(legalActions) if len(legalActions) > 0 else 0
 
     def getAction(self, gameState: GameState):
         """
@@ -355,8 +355,9 @@ def betterEvaluationFunction(currentGameState: GameState):
 
     DESCRIPTION: <write something here so we know what you did>
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    return currentGameState.getScore()
+
+
 
 # Abbreviation
 better = betterEvaluationFunction
